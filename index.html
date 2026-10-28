@@ -860,6 +860,58 @@ function renderOpsSub(){
 setInterval(()=>{if(current==="operations")renderOpsSub();},2000);
 $("menuBtn").onclick=()=>{$("side").classList.add("open");const s=document.createElement("div");s.className="scrim";s.onclick=()=>{$("side").classList.remove("open");s.remove();};document.body.appendChild(s);};
 window.addEventListener("storage",()=>{if(current==="overview")renderOverview();badge();chrome();});
+  /* ===== Gate Pass Neon API ===== */
+const GATE_API = '/api/gate-passes';
+
+async function loadGatePasses() {
+  try {
+    const res = await fetch(GATE_API);
+    if (!res.ok) throw new Error('Failed to load gate passes');
+    const rows = await res.json();
+    return rows.map(r => ({
+      id: r.id,
+      no: r.pass_no,
+      data: typeof r.data === 'string' ? JSON.parse(r.data) : (r.data || {})
+    }));
+  } catch (e) {
+    console.error('Gate Pass load error:', e);
+    return [];
+  }
+}
+
+async function saveGatePass(pass) {
+  try {
+    const body = {
+      pass_no: pass.no || null,
+      data: pass.data || pass
+    };
+    const res = await fetch(GATE_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error('Save failed');
+    return await res.json();
+  } catch (e) {
+    console.error('Gate Pass save error:', e);
+    alert('Gate Pass সেভ হয়নি');
+    return null;
+  }
+}
+
+async function deleteGatePass(id) {
+  try {
+    const res = await fetch(GATE_API, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id })
+    });
+    return res.ok;
+  } catch (e) {
+    console.error(e);
+    return false;
+  }
+}
 
 /* ---- data readers ---- */
 function rd(key,fb){try{const d=JSON.parse(localStorage.getItem(key));return d==null?fb:d;}catch(e){return fb;}}
@@ -906,7 +958,15 @@ const OV_THEMES=[
  {n:"Slate Steel",d1:"#0f172a",d2:"#334155",a:"#475569",b:"#94a3b8",g:"#38bdf8"},
  {n:"Forest Lime",d1:"#0a2410",d2:"#14532d",a:"#16a34a",b:"#84cc16",g:"#fde047"}];
 const OV_FIXED=OV_THEMES[0];
-function renderOverview(){
+async function renderOverview(){
+  const el=$("ov");if(!el)return;
+  const tt=OV_FIXED,dk=theme()==="dark",first=!el.dataset.init;
+  el.dataset.init="1";
+  el.className="ov ovx"+(first?" first":"");
+  [["--ovd1",tt.d1],["--ovd2",tt.d2],["--ova",tt.a],["--ovg",tt.g],["--brand",dk?tt.b:tt.a],["--brand2",tt.b],["--grad","linear-gradient(135deg,"+tt.a+","+tt.b+")"]].forEach(x=>el.style.setProperty(x[0],x[1]));
+  
+  const L=lic(),staff=rd("young_staff_ip_v2",null),pur=rd("youngPurchaseRecords",[]);
+  const gates = await loadGatePasses();   // Neon থেকে লোড
   const el=$("ov");if(!el)return;
   const tt=OV_FIXED,dk=theme()==="dark",first=!el.dataset.init;
   el.dataset.init="1";
