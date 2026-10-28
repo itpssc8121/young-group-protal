@@ -1,0 +1,21 @@
+/* ===== Neon database sync ===== */
+const API="/api/gate-passes";
+async function dbSave(record){
+  try{
+    const r=await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({pass_no:record.no,data:record})});
+    if(!r.ok)throw new Error(await r.text());
+    return true;
+  }catch(e){console.error("DB save failed",e);return false}
+}
+(function(){
+  const origSave=window.savePass;
+  window.savePass=function(thenPrint){
+    const data=getData(passes[0]);
+    origSave(thenPrint);
+    if(data.no&&data.no.trim()){
+      dbSave({id:null,no:data.no.trim(),data:data,saved:new Date().toLocaleString()})
+        .then(ok=>toast(ok?"Saved to database ✓":"⚠ Database save failed"));
+    }
+  };
+})();
