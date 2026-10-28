@@ -22,15 +22,17 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'POST') {
-      const { pass_no, data } = req.body;
+      const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+      const pass_no = body.pass_no || body.passNo || null;
+      const data = body.data || body;
+
       const result = await sql`
         INSERT INTO gate_passes (pass_no, data)
-        VALUES (${pass_no || null}, ${JSON.stringify(data || {})})
+        VALUES (${pass_no}, ${JSON.stringify(data)}::jsonb)
         RETURNING id, pass_no, data, created_at
       `;
       return res.status(201).json(result[0]);
     }
-
     if (req.method === 'PUT') {
       const { id, pass_no, data } = req.body;
       const result = await sql`
